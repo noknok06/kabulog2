@@ -19,6 +19,7 @@
     {% if user.is_authenticated %}
       <nav class="topnav">
         <a href="{% url 'home' %}">ホーム</a>
+        <a href="{% url 'journal:library' %}">ライブラリ</a>
         <a class="cta" href="{% url 'journal:compose' %}">書く</a>
       </nav>
     {% endif %}

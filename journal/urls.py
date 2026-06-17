@@ -6,6 +6,7 @@ app_name = "journal"
 
 urlpatterns = [
     path("compose/", views.compose, name="compose"),
+    path("library/", views.library, name="library"),
     path("autosave/", views.autosave, name="autosave"),
     path("publish/", views.publish, name="publish"),
     path("<int:pk>/", views.detail, name="detail"),

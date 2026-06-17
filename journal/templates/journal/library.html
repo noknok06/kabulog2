@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+{% load kabu_extras %}
+{% block title %}ライブラリ · kabu-log{% endblock %}
+
+{% block content %}
+<section class="library">
+  <h1 class="library-title">ライブラリ</h1>
+  <p class="muted">これまでの記録を、検索して読み返す。</p>
+
+  <form class="library-controls" method="get" action="{% url 'journal:library' %}"
+        hx-get="{% url 'journal:library' %}"
+        hx-target="#library-results"
+        hx-swap="innerHTML"
+        hx-push-url="true"
+        hx-trigger="change, search, keyup changed delay:300ms">
+    <input type="search" name="q" value="{{ q }}" class="library-search"
+           placeholder="銘柄・仮説・学びを検索…" autocomplete="off">
+
+    <div class="library-filters">
+      <select name="action" aria-label="行動で絞り込む">
+        <option value="">すべての行動</option>
+        {% for value, label in actions %}
+          <option value="{{ value }}" {% if value == action %}selected{% endif %}>{{ label }}</option>
+        {% endfor %}
+      </select>
+
+      <select name="verdict" aria-label="判定で絞り込む">
+        <option value="">すべての判定</option>
+        {% for value, label in verdicts %}
+          <option value="{{ value }}" {% if value == verdict %}selected{% endif %}>{{ label }}</option>
+        {% endfor %}
+      </select>
+
+      {% if tags %}
+        <select name="tag" aria-label="テーマで絞り込む">
+          <option value="">すべてのテーマ</option>
+          {% for t in tags %}
+            <option value="{{ t.slug }}" {% if t.slug == tag %}selected{% endif %}>{{ t.name }}</option>
+          {% endfor %}
+        </select>
+      {% endif %}
+
+      <select name="sort" aria-label="並び替え">
+        <option value="">新しい順</option>
+        <option value="old" {% if sort == 'old' %}selected{% endif %}>古い順</option>
+      </select>
+
+      <noscript><button type="submit" class="btn-ghost">絞り込む</button></noscript>
+    </div>
+  </form>
+
+  <div id="library-results">
+    {% include "journal/partials/_library_results.html" %}
+  </div>
+</section>
+{% endblock %}

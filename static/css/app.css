@@ -195,6 +195,53 @@ a:hover { text-decoration: underline; }
 
 .entry-foot { margin-top: 3rem; display: flex; gap: 1.5rem; }
 
+/* --- Library (browse / search the accumulated memory) --- */
+.library-title { font-family: var(--serif); font-size: 1.8rem; margin: 0 0 .25rem; }
+.library-controls { margin: 1.5rem 0 1rem; }
+.library-search {
+  width: 100%; font: inherit; padding: .6rem .8rem; border: 1px solid var(--line);
+  border-radius: 8px; background: var(--surface); color: var(--ink);
+}
+.library-filters { display: flex; flex-wrap: wrap; gap: .5rem; margin-top: .75rem; }
+.library-filters select {
+  font: inherit; padding: .4rem .6rem; border: 1px solid var(--line);
+  border-radius: 8px; background: var(--surface); color: var(--ink);
+}
+.result-summary { color: var(--ink-faint); font-size: .85rem; letter-spacing: .03em; margin: 1rem 0; }
+
+.entry-list { list-style: none; padding: 0; margin: 0; }
+.entry-row {
+  display: flex; align-items: baseline; justify-content: space-between; gap: 1rem;
+  padding: 1rem 0; border-top: 1px solid var(--line);
+}
+.entry-row:last-child { border-bottom: 1px solid var(--line); }
+.entry-row-main { display: block; flex: 1; min-width: 0; }
+.entry-row-title { display: block; font-family: var(--serif); font-size: 1.15rem; color: var(--ink); }
+.entry-row-main:hover { text-decoration: none; }
+.entry-row-main:hover .entry-row-title { text-decoration: underline; }
+.entry-row-excerpt { display: block; color: var(--ink-faint); font-size: .92rem; margin-top: .2rem; }
+.entry-row-meta {
+  display: flex; align-items: center; gap: .6rem; flex-shrink: 0;
+  color: var(--ink-faint); font-size: .85rem; white-space: nowrap;
+}
+.entry-row-meta time { font-variant-numeric: tabular-nums; }
+.entry-row .verdict-badge {
+  padding: .15rem .6rem; border-radius: 999px; background: var(--surface-2);
+  color: var(--ink-soft); font-size: .8rem;
+}
+.entry-row-pnl { font-variant-numeric: tabular-nums; }
+.entry-row-pnl.pnl-gain { color: var(--gain); }
+.entry-row-pnl.pnl-loss { color: var(--loss); }
+
+.library-empty { text-align: center; color: var(--ink-soft); padding: 3rem 0; }
+.pager { display: flex; align-items: center; justify-content: center; gap: 1.25rem; margin: 2rem 0; }
+.pager-status { color: var(--ink-faint); font-size: .85rem; font-variant-numeric: tabular-nums; }
+
+@media (max-width: 32rem) {
+  .entry-row { flex-direction: column; gap: .35rem; }
+  .entry-row-meta { white-space: normal; }
+}
+
 /* --- Motion: respect reduced-motion --- */
 @media (prefers-reduced-motion: reduce) {
   * { animation: none !important; transition: none !important; }

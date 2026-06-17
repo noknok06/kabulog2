@@ -87,6 +87,58 @@ def test_autosave_creates_single_draft_then_updates(client, alice):
     assert entry.status == Entry.Status.DRAFT
 
 
+def test_library_lists_only_owner_published(client, alice, alice_entry):
+    """Library shows PUBLISHED records; drafts stay in the compose workspace."""
+    Entry.objects.create(owner=alice, body="alice_draft_marker", status=Entry.Status.DRAFT)
+    client.force_login(alice)
+    body = client.get(reverse("journal:library")).content.decode()
+    assert "alice_private_thesis_marker" in body
+    assert "alice_draft_marker" not in body
+
+
+def test_library_excludes_other_users_entries(client, alice, bob):
+    """The list version of IDOR: bob's records never appear in alice's library."""
+    Entry.objects.create(owner=bob, body="bob_private_marker", status=Entry.Status.PUBLISHED)
+    client.force_login(alice)
+    body = client.get(reverse("journal:library")).content.decode()
+    assert "bob_private_marker" not in body
+
+
+def test_library_keyword_search(client, alice):
+    client.force_login(alice)
+    Entry.objects.create(owner=alice, body="円安についての考察", status=Entry.Status.PUBLISHED)
+    Entry.objects.create(owner=alice, body="半導体の需要動向", status=Entry.Status.PUBLISHED)
+    body = client.get(reverse("journal:library"), {"q": "円安"}).content.decode()
+    assert "円安についての考察" in body
+    assert "半導体の需要動向" not in body
+
+
+def test_library_filter_by_action_and_verdict(client, alice):
+    client.force_login(alice)
+    Entry.objects.create(owner=alice, body="buy_marker", status=Entry.Status.PUBLISHED, action=Entry.Action.BUY)
+    Entry.objects.create(owner=alice, body="watch_marker", status=Entry.Status.PUBLISHED, action=Entry.Action.WATCH)
+    Entry.objects.create(owner=alice, body="hit_marker", status=Entry.Status.PUBLISHED, verdict=Entry.Verdict.HIT)
+
+    by_action = client.get(reverse("journal:library"), {"action": "buy"}).content.decode()
+    assert "buy_marker" in by_action and "watch_marker" not in by_action
+
+    by_verdict = client.get(reverse("journal:library"), {"verdict": "hit"}).content.decode()
+    assert "hit_marker" in by_verdict and "buy_marker" not in by_verdict
+
+    # An invalid filter value is ignored rather than erroring or hiding everything.
+    ignored = client.get(reverse("journal:library"), {"action": "bogus"}).content.decode()
+    assert "buy_marker" in ignored and "watch_marker" in ignored
+
+
+def test_library_htmx_returns_partial(client, alice, alice_entry):
+    """An htmx request gets just the results fragment, not the full chrome."""
+    client.force_login(alice)
+    resp = client.get(reverse("journal:library"), HTTP_HX_REQUEST="true")
+    content = resp.content.decode()
+    assert "件の記録" in content          # the results fragment rendered
+    assert "<!doctype html>" not in content  # but not the full base.html page
+
+
 def test_scoring_writes_quality_not_result(client, alice, alice_entry):
     """Scoring sets verdict/learning and verified_at — it never touches P&L."""
     client.force_login(alice)

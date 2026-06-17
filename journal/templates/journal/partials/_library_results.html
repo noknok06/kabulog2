@@ -1,0 +1,55 @@
+{% load kabu_extras %}
+<p class="result-summary">{{ total }}件の記録</p>
+
+{% if page_obj.object_list %}
+  <ul class="entry-list">
+    {% for entry in page_obj %}
+      <li class="entry-row verdict-{{ entry.verdict }}">
+        <a class="entry-row-main" href="{{ entry.get_absolute_url }}">
+          <span class="entry-row-title">{{ entry.title|default:entry.display_name|default:entry.body|truncatechars:48|default:"無題の記録" }}</span>
+          {% if entry.hypothesis %}
+            <span class="entry-row-excerpt">「{{ entry.hypothesis|truncatechars:80 }}」</span>
+          {% elif entry.learning %}
+            <span class="entry-row-excerpt">学び：{{ entry.learning|truncatechars:80 }}</span>
+          {% endif %}
+        </a>
+        <div class="entry-row-meta">
+          <time datetime="{{ entry.occurred_at|date:'Y-m-d' }}">{{ entry.occurred_at|date:"Y/n/j" }}</time>
+          <span class="entry-row-action">{{ entry.get_action_display }}</span>
+          {% if entry.verdict != 'unverified' %}
+            <span class="verdict-badge">{{ entry.get_verdict_display }}</span>
+          {% endif %}
+          {% if entry.result and entry.result.pnl_amount is not None %}
+            <span class="entry-row-pnl {% if entry.result.pnl_amount >= 0 %}pnl-gain{% else %}pnl-loss{% endif %}">{{ entry.result.pnl_amount }}</span>
+          {% endif %}
+        </div>
+      </li>
+    {% endfor %}
+  </ul>
+
+  {% if page_obj.has_other_pages %}
+    <nav class="pager">
+      {% if page_obj.has_previous %}
+        <a class="btn-link" href="?{{ querystring }}&page={{ page_obj.previous_page_number }}"
+           hx-get="?{{ querystring }}&page={{ page_obj.previous_page_number }}"
+           hx-target="#library-results" hx-swap="innerHTML" hx-push-url="true">← 前へ</a>
+      {% endif %}
+      <span class="pager-status">{{ page_obj.number }} / {{ page_obj.paginator.num_pages }}</span>
+      {% if page_obj.has_next %}
+        <a class="btn-link" href="?{{ querystring }}&page={{ page_obj.next_page_number }}"
+           hx-get="?{{ querystring }}&page={{ page_obj.next_page_number }}"
+           hx-target="#library-results" hx-swap="innerHTML" hx-push-url="true">次へ →</a>
+      {% endif %}
+    </nav>
+  {% endif %}
+{% else %}
+  <div class="library-empty">
+    {% if q or action or verdict or tag %}
+      <p>条件に合う記録はありません。</p>
+      <a class="btn-link" href="{% url 'journal:library' %}">条件をクリア</a>
+    {% else %}
+      <p>まだ記録がありません。</p>
+      <a class="btn-primary" href="{% url 'journal:compose' %}">最初の記録を書く</a>
+    {% endif %}
+  </div>
+{% endif %}

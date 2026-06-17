@@ -6,6 +6,8 @@ so a foreign pk yields 404, never a leak. ``owner`` is always set from
 import json
 
 from django.contrib.auth.decorators import login_required
+from django.core.paginator import Paginator
+from django.db.models import Q
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 from django.views.decorators.http import require_POST
@@ -13,7 +15,7 @@ from django.views.decorators.http import require_POST
 from common.context_processors import resolve_as_of
 
 from .forms import EntryForm, ScoreForm, TradeResultForm
-from .models import Entry, TradeResult
+from .models import Entry, ThemeTag, TradeResult
 
 # Never a blank page — offer a question. Deterministic by day so it's stable.
 WRITING_PROMPTS = [
@@ -50,6 +52,69 @@ def compose(request):
         "journal/compose.html",
         {"form": EntryForm(), "entry": None, "drafts": drafts, "prompt": _todays_prompt(request)},
     )
+
+
+@login_required
+def library(request):
+    """The accumulated memory: browse, search and filter PUBLISHED records.
+
+    Every query funnels through ``for_owner`` so another user's records can never
+    appear. Keyword search is ``icontains`` for now — semantic search will later
+    augment/replace this single block.
+    """
+    qs = Entry.objects.for_owner(request.user).filter(status=Entry.Status.PUBLISHED)
+
+    q = (request.GET.get("q") or "").strip()
+    if q:
+        qs = qs.filter(
+            Q(title__icontains=q)
+            | Q(body__icontains=q)
+            | Q(hypothesis__icontains=q)
+            | Q(learning__icontains=q)
+            | Q(ticker__icontains=q)
+            | Q(instrument_name__icontains=q)
+        )
+
+    action = request.GET.get("action") or ""
+    if action in Entry.Action.values:
+        qs = qs.filter(action=action)
+
+    verdict = request.GET.get("verdict") or ""
+    if verdict in Entry.Verdict.values:
+        qs = qs.filter(verdict=verdict)
+
+    tag = request.GET.get("tag") or ""
+    if tag:
+        qs = qs.filter(tags__slug=tag)
+
+    order = "occurred_at" if request.GET.get("sort") == "old" else "-occurred_at"
+    qs = (
+        qs.distinct()
+        .select_related("result")
+        .prefetch_related("tags")
+        .order_by(order, "-created_at")
+    )
+
+    paginator = Paginator(qs, 20)
+    page = paginator.get_page(request.GET.get("page"))
+
+    params = request.GET.copy()
+    params.pop("page", None)
+    ctx = {
+        "page_obj": page,
+        "total": paginator.count,
+        "q": q,
+        "action": action,
+        "verdict": verdict,
+        "tag": tag,
+        "sort": request.GET.get("sort", ""),
+        "actions": Entry.Action.choices,
+        "verdicts": Entry.Verdict.choices,
+        "tags": ThemeTag.objects.for_owner(request.user),  # empty → filter UI hidden
+        "querystring": params.urlencode(),
+    }
+    template = "journal/partials/_library_results.html" if request.htmx else "journal/library.html"
+    return render(request, template, ctx)
 
 
 @login_required
