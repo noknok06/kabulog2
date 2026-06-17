@@ -1,0 +1,9 @@
+{% extends "base.html" %}
+{% block title %}振り返る · kabu-log{% endblock %}
+
+{% block content %}
+<section class="entry-score" id="entry-score">
+  {% include "journal/partials/_score_form.html" with form=form entry=entry %}
+  <p><a class="btn-link" href="{{ entry.get_absolute_url }}">記録に戻る</a></p>
+</section>
+{% endblock %}

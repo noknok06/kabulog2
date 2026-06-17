@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% block title %}ログイン · kabu-log{% endblock %}
+
+{% block content %}
+<section class="auth">
+  <h1 class="auth-title">投資判断の記憶を、ここに。</h1>
+  <p class="auth-sub">10年後の自分が、今日の判断を正確に理解できる場所。</p>
+
+  {% if DEBUG %}
+    <a class="btn-primary" href="{% url 'dev_login' %}">開発用ログインで入る</a>
+    <p class="auth-note">※ ローカル開発用の簡易ログインです。本番では Google ログイン（OIDC）に切り替わります。</p>
+  {% else %}
+    <p class="auth-note">Google ログインは近日対応予定です。</p>
+  {% endif %}
+</section>
+{% endblock %}

@@ -1,0 +1,28 @@
+{% load kabu_extras %}
+<div class="score-block">
+  <h2>振り返る</h2>
+  <p class="muted">結果（損益）ではなく、<strong>意思決定の質</strong>を採点します。</p>
+
+  {% if entry.hypothesis %}
+    <p class="hypothesis-text">「{{ entry.hypothesis }}」</p>
+  {% endif %}
+
+  <form hx-post="{% url 'journal:score' entry.pk %}"
+        hx-target="closest .score-block"
+        hx-swap="outerHTML transition:true">
+    {% csrf_token %}
+    <div class="verdict-chips">
+      {% for radio in form.verdict %}
+        <label class="chip">{{ radio.tag }}<span>{{ radio.choice_label }}</span></label>
+      {% endfor %}
+    </div>
+
+    <label for="id_learning">学び</label>
+    <textarea name="learning" id="id_learning" rows="4"
+              placeholder="仮説は正しかったか / 見落とした要因 / 再現できる判断か / 次回改善できること">{{ form.learning.value|default:'' }}</textarea>
+
+    <div class="score-actions">
+      <button type="submit" class="btn-primary">学びを記録する</button>
+    </div>
+  </form>
+</div>

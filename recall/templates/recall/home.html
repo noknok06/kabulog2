@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% load kabu_extras %}
+{% block title %}ホーム · kabu-log{% endblock %}
+
+{% block content %}
+<section class="home">
+  <p class="home-greeting">{{ as_of|date:"Y年n月j日" }} · 過去の自分と再会する</p>
+
+  {% if cards %}
+    <div class="recall-feed" id="recall-feed">
+      {% for card in cards %}
+        {% include "recall/partials/_recall_card.html" with card=card %}
+      {% endfor %}
+    </div>
+  {% else %}
+    <div class="recall-empty">
+      <p>今日、思い出す記録はまだありません。</p>
+      <a class="btn-primary" href="{% url 'journal:compose' %}">最初の記録を書く</a>
+    </div>
+  {% endif %}
+
+  <aside class="home-aside">
+    {% if awaiting_count %}
+      <p class="nudge">検証待ちの仮説が <strong>{{ awaiting_count }}</strong> 件あります。</p>
+    {% endif %}
+    {% if recent_learnings %}
+      <div class="recent-learnings">
+        <h2>最近の学び</h2>
+        <ul>
+          {% for e in recent_learnings %}
+            <li><a href="{{ e.get_absolute_url }}">{{ e.learning|truncatechars:48 }}</a></li>
+          {% endfor %}
+        </ul>
+      </div>
+    {% endif %}
+    <a class="quiet-write" href="{% url 'journal:compose' %}">＋ 新しい記録を書く</a>
+  </aside>
+</section>
+{% endblock %}

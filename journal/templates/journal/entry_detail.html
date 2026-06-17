@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{% load kabu_extras %}
+{% block title %}{{ entry.title|default:"記録" }} · kabu-log{% endblock %}
+
+{% block content %}
+<article class="entry">
+  <header class="entry-head">
+    <p class="entry-meta">
+      {{ entry.occurred_at|date:"Y年n月j日" }} · {{ entry.get_action_display }}
+      {% if entry.display_name %} · {{ entry.display_name }}{% endif %}
+    </p>
+    {% if entry.title %}<h1 class="entry-title">{{ entry.title }}</h1>{% endif %}
+  </header>
+
+  {# 1. 本文 — the star #}
+  <div class="entry-body">{{ entry.body|linebreaks }}</div>
+
+  {# 2. 当時の仮説 #}
+  {% if entry.hypothesis %}
+    <section class="entry-hypothesis">
+      <h2>当時の仮説</h2>
+      <p class="hypothesis-text">「{{ entry.hypothesis }}」</p>
+      {% if entry.confidence is not None %}
+        <p class="muted">確信度 {{ entry.confidence }}%（{{ entry.confidence|confidence_label }}）</p>
+      {% endif %}
+      {% if entry.falsification %}
+        <p class="muted">反証条件：{{ entry.falsification }}</p>
+      {% endif %}
+    </section>
+  {% endif %}
+
+  {# 3-5. 検証と学び（意思決定の質） #}
+  <section class="entry-score" id="entry-score">
+    {% if entry.verdict == entry.Verdict.UNVERIFIED %}
+      {% include "journal/partials/_score_form.html" with form=score_form entry=entry %}
+    {% else %}
+      {% include "journal/partials/_score_done.html" with entry=entry %}
+    {% endif %}
+  </section>
+
+  {# 6. 結果（損益）— a separate, quiet lineage. Never the star. #}
+  {% include "journal/partials/_result_panel.html" with entry=entry result=entry.result result_form=result_form %}
+
+  <footer class="entry-foot">
+    <a class="btn-link" href="{% url 'journal:edit' entry.pk %}">編集する</a>
+    <a class="btn-link" href="{% url 'home' %}">ホームへ</a>
+  </footer>
+</article>
+{% endblock %}

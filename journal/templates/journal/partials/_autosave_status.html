@@ -1,0 +1,5 @@
+{% if error %}
+  <span class="autosave-status error" id="autosave-status">保存できませんでした</span>
+{% else %}
+  <span class="autosave-status saved" id="autosave-status">保存しました {{ saved_at|date:"H:i" }}</span>
+{% endif %}

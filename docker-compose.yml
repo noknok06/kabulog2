@@ -1,0 +1,23 @@
+# Local development database only. dev/prod parity: Postgres 16 + pgvector.
+# Host port 5433 deliberately avoids the system cluster on 5432.
+# Django itself runs on the host via `manage.py runserver` for the fastest inner loop.
+services:
+  db:
+    image: pgvector/pgvector:pg16
+    container_name: kabulog_db
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-kabulog}
+      POSTGRES_USER: ${POSTGRES_USER:-kabulog}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-kabulog}
+    ports:
+      - "5433:5432"
+    volumes:
+      - kabulog_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-kabulog}"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+volumes:
+  kabulog_pgdata:

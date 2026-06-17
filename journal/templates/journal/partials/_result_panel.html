@@ -1,0 +1,30 @@
+{% load kabu_extras %}
+<section class="result-panel" id="result-panel">
+  <h2>結果（損益）</h2>
+  <p class="muted">これは<strong>意思決定の質とは別物</strong>です。仮説が当たっても株価は下がることがあります。</p>
+
+  {% if result.pk and result.pnl_pct is not None %}
+    <p class="result-figure {% if result.pnl_pct >= 0 %}gain{% else %}loss{% endif %}">
+      {{ result.pnl_pct }}%{% if result.note %} <span class="muted">· {{ result.note }}</span>{% endif %}
+    </p>
+  {% endif %}
+
+  <details class="result-edit" {% if not result.pk %}open{% endif %}>
+    <summary>結果を記録 / 更新する</summary>
+    <form hx-post="{% url 'journal:result' entry.pk %}"
+          hx-target="#result-panel"
+          hx-swap="outerHTML transition:true">
+      {% csrf_token %}
+      <div class="result-grid">
+        <label>損益率(%) {{ result_form.pnl_pct }}</label>
+        <label>損益額 {{ result_form.pnl_amount }}</label>
+        <label>取得価格 {{ result_form.entry_price }}</label>
+        <label>売却価格 {{ result_form.exit_price }}</label>
+        <label>数量 {{ result_form.quantity }}</label>
+        <label class="checkbox">{{ result_form.realized }} 確定済み</label>
+      </div>
+      <label>メモ {{ result_form.note }}</label>
+      <button type="submit" class="btn-ghost">結果を保存</button>
+    </form>
+  </details>
+</section>

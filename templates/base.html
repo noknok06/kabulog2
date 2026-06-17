@@ -1,0 +1,35 @@
+{% load static %}
+<!doctype html>
+<html lang="ja" data-theme="auto">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <title>{% block title %}kabu-log{% endblock %}</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="stylesheet" href="{% static 'css/app.css' %}">
+  <script defer src="{% static 'vendor/htmx.min.js' %}"></script>
+  <script defer src="{% static 'js/htmx-config.js' %}"></script>
+  <script defer src="{% static 'js/autosave.js' %}"></script>
+  <script defer src="{% static 'js/confidence.js' %}"></script>
+</head>
+<body>
+  <header class="topbar">
+    <a class="wordmark" href="{% url 'home' %}">kabu<span>-</span>log</a>
+    {% if user.is_authenticated %}
+      <nav class="topnav">
+        <a href="{% url 'home' %}">ホーム</a>
+        <a class="cta" href="{% url 'journal:compose' %}">書く</a>
+      </nav>
+    {% endif %}
+  </header>
+
+  {% include "partials/_messages.html" %}
+
+  <main class="shell">
+    {% block content %}{% endblock %}
+  </main>
+
+  {% block scripts %}{% endblock %}
+</body>
+</html>

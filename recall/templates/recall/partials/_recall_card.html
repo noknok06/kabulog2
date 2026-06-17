@@ -1,0 +1,32 @@
+{% load kabu_extras %}
+<article class="recall-card source-{{ card.source }}" id="card-{{ card.entry.pk }}-{{ card.source }}">
+  <p class="card-kicker">{{ card.reason }}</p>
+  <h2 class="card-title">
+    <a href="{{ card.entry.get_absolute_url }}">{{ card.entry.title|default:card.entry.display_name|default:"無題の記録" }}</a>
+  </h2>
+
+  {% if card.entry.hypothesis %}
+    <p class="card-hypothesis">「{{ card.entry.hypothesis }}」</p>
+    {% if card.entry.confidence is not None %}
+      <p class="card-confidence">当時の確信度 {{ card.entry.confidence }}%（{{ card.entry.confidence|confidence_label }}）</p>
+    {% endif %}
+  {% else %}
+    <p class="card-body">{{ card.entry.body|truncatechars:120 }}</p>
+  {% endif %}
+
+  <div class="card-actions">
+    {% if card.entry.awaits_scoring %}
+      <button class="btn-primary"
+              hx-get="{% url 'journal:score' card.entry.pk %}"
+              hx-target="#card-{{ card.entry.pk }}-{{ card.source }}"
+              hx-swap="outerHTML transition:true">いま振り返る</button>
+    {% else %}
+      <a class="btn-link" href="{{ card.entry.get_absolute_url }}">開く</a>
+    {% endif %}
+    <button class="btn-ghost"
+            hx-post="{% url 'recall:dismiss' card.entry.pk %}"
+            hx-vals='{"source": "{{ card.source }}"}'
+            hx-target="#card-{{ card.entry.pk }}-{{ card.source }}"
+            hx-swap="outerHTML transition:true">あとで</button>
+  </div>
+</article>

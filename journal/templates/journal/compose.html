@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+{% block title %}書く · kabu-log{% endblock %}
+
+{% block content %}
+<section class="compose">
+  {% if drafts %}
+    <details class="draft-recovery">
+      <summary>下書きが {{ drafts|length }} 件あります</summary>
+      <ul>
+        {% for d in drafts %}
+          <li><a href="{% url 'journal:edit' d.pk %}">{{ d.title|default:d.body|truncatechars:40|default:"無題の下書き" }}</a>
+            <span class="muted">{{ d.updated_at|date:"n/j H:i" }}</span></li>
+        {% endfor %}
+      </ul>
+    </details>
+  {% endif %}
+
+  <form id="compose-form" method="post" action="{% url 'journal:publish' %}"
+        data-autosave-url="{% url 'journal:autosave' %}">
+    {% csrf_token %}
+    <input type="hidden" name="entry_id" id="entry-id" value="{{ entry.pk|default:'' }}">
+
+    <div class="compose-meta">
+      {{ form.occurred_at }}
+      {{ form.action }}
+      {{ form.ticker }}
+      {{ form.instrument_name }}
+    </div>
+
+    <input type="text" name="title" id="id_title" class="compose-title"
+           placeholder="タイトル（任意）" value="{{ form.title.value|default:'' }}">
+
+    <textarea name="body" id="id_body" class="compose-body" rows="16"
+              placeholder="{{ prompt }}">{{ form.body.value|default:'' }}</textarea>
+    {% for err in form.body.errors %}<p class="field-error">{{ err }}</p>{% endfor %}
+
+    <details class="prereg" {% if form.hypothesis.value %}open{% endif %}>
+      <summary>判断を事前登録する（仮説・確信度・反証条件）</summary>
+      <p class="prereg-hint">買う／売るその瞬間に、軽く残しておくと、未来の自分が診察できます。</p>
+
+      <label for="id_hypothesis">仮説（反証可能な主張）</label>
+      <textarea name="hypothesis" id="id_hypothesis" rows="2"
+                placeholder="例：生成AI需要は10年以上続き、光ファイバ需要を押し上げる">{{ form.hypothesis.value|default:'' }}</textarea>
+
+      <label for="id_confidence">確信度</label>
+      <div class="confidence-control">
+        <input type="range" name="confidence" id="id_confidence" min="0" max="100" step="5"
+               value="{{ form.confidence.value|default:50 }}"
+               data-confidence-input>
+        <output data-confidence-output>{{ form.confidence.value|default:50 }}</output>%
+      </div>
+
+      <label for="id_falsification">反証条件（何が起きたら間違いと認めるか）</label>
+      <textarea name="falsification" id="id_falsification" rows="2"
+                placeholder="例：受注が2四半期連続で減少したら間違い">{{ form.falsification.value|default:'' }}</textarea>
+    </details>
+
+    <div class="compose-footer">
+      <span id="autosave-status" class="autosave-status">下書きは自動保存されます</span>
+      <button type="submit" class="btn-primary">記録する</button>
+    </div>
+  </form>
+</section>
+{% endblock %}

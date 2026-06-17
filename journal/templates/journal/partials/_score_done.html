@@ -1,0 +1,12 @@
+{% load kabu_extras %}
+<div class="score-block scored verdict-{{ entry.verdict }}">
+  <h2>検証と学び</h2>
+  <p class="verdict-badge">{{ entry.get_verdict_display }}</p>
+  {% if entry.learning %}
+    <div class="learning-text">{{ entry.learning|linebreaks }}</div>
+  {% endif %}
+  <button class="btn-link"
+          hx-get="{% url 'journal:score' entry.pk %}"
+          hx-target="closest .score-block"
+          hx-swap="outerHTML transition:true">採点をやり直す</button>
+</div>
