@@ -89,6 +89,14 @@ ASGI_APPLICATION = "config.asgi.application"
 # --- Database (PostgreSQL only; no SQLite — dev/prod parity) -----------------
 DATABASES = {"default": env.db("DATABASE_URL")}
 
+# --- Semantic search (embeddings) -------------------------------------------
+# "local"   = run an HF sentence-transformer on-box (private; no data leaves).
+# "fallback"= deterministic hash embedding (no deps/network; tests use this).
+# The backend is swappable; the model/dim are fixed to the VectorField column.
+EMBEDDING_BACKEND = env("EMBEDDING_BACKEND", default="local")
+EMBEDDING_MODEL = env("EMBEDDING_MODEL", default="intfloat/multilingual-e5-base")
+EMBEDDING_DIM = 768  # must match journal.Entry.embedding's VectorField dimensions
+
 # --- Auth -------------------------------------------------------------------
 AUTH_USER_MODEL = "accounts.User"
 

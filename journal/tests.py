@@ -139,6 +139,67 @@ def test_library_htmx_returns_partial(client, alice, alice_entry):
     assert "<!doctype html>" not in content  # but not the full base.html page
 
 
+# --- Semantic search (runs on the deterministic fallback embedder) ----------
+def test_embedder_fallback_is_deterministic_and_normalized():
+    from common.embeddings import EMBEDDING_DIM, embed_documents, embed_query
+
+    v1 = embed_query("円安は続く")
+    v2 = embed_query("円安は続く")
+    assert v1 == v2                       # deterministic
+    assert len(v1) == EMBEDDING_DIM       # matches the column dimension
+    assert abs(sum(x * x for x in v1) ** 0.5 - 1.0) < 1e-6  # L2-normalized
+    # Different texts give different vectors; batch order is preserved.
+    docs = embed_documents(["円安", "半導体"])
+    assert docs[0] != docs[1]
+    assert embed_documents(["円安"])[0] == docs[0]
+
+
+def test_publish_sets_embedding(client, alice):
+    client.force_login(alice)
+    client.post(
+        reverse("journal:publish"),
+        {"body": "半導体の需要は強い", "occurred_at": "2026-01-01", "action": "note"},
+    )
+    entry = Entry.objects.for_owner(alice).get()
+    assert entry.embedding is not None
+    assert len(entry.embedding) == 768
+
+
+def test_embed_entries_command_backfills(alice):
+    from django.core.management import call_command
+
+    Entry.objects.create(owner=alice, body="埋め込み待ちの記録", status=Entry.Status.PUBLISHED)
+    assert Entry.all_objects.filter(embedding__isnull=True).count() == 1
+    call_command("embed_entries")
+    assert Entry.all_objects.filter(embedding__isnull=True).count() == 0
+
+
+def test_library_semantic_orders_by_similarity(client, alice):
+    """Semantic mode ranks the lexically/semantically closer entry first."""
+    client.force_login(alice)
+    from journal.services.embeddings import embed_entry
+
+    near = Entry.objects.create(owner=alice, body="円安と為替の見通し", status=Entry.Status.PUBLISHED)
+    far = Entry.objects.create(owner=alice, body="半導体の設備投資", status=Entry.Status.PUBLISHED)
+    embed_entry(near)
+    embed_entry(far)
+
+    resp = client.get(reverse("journal:library"), {"q": "円安 為替", "mode": "semantic"})
+    body = resp.content.decode()
+    assert "意味の近い順" in body
+    assert body.index("円安と為替の見通し") < body.index("半導体の設備投資")
+
+
+def test_library_semantic_is_owner_scoped(client, alice, bob):
+    from journal.services.embeddings import embed_entry
+
+    bob_entry = Entry.objects.create(owner=bob, body="bob_semantic_marker 円安", status=Entry.Status.PUBLISHED)
+    embed_entry(bob_entry)
+    client.force_login(alice)
+    body = client.get(reverse("journal:library"), {"q": "円安", "mode": "semantic"}).content.decode()
+    assert "bob_semantic_marker" not in body
+
+
 def test_scoring_writes_quality_not_result(client, alice, alice_entry):
     """Scoring sets verdict/learning and verified_at — it never touches P&L."""
     client.force_login(alice)

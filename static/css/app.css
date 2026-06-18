@@ -202,6 +202,10 @@ a:hover { text-decoration: underline; }
   width: 100%; font: inherit; padding: .6rem .8rem; border: 1px solid var(--line);
   border-radius: 8px; background: var(--surface); color: var(--ink);
 }
+.library-semantic-toggle {
+  display: inline-flex; align-items: center; gap: .4rem; margin-top: .6rem;
+  color: var(--ink-soft); font-size: .9rem; cursor: pointer;
+}
 .library-filters { display: flex; flex-wrap: wrap; gap: .5rem; margin-top: .75rem; }
 .library-filters select {
   font: inherit; padding: .4rem .6rem; border: 1px solid var(--line);

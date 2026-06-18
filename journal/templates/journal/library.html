@@ -16,6 +16,11 @@
     <input type="search" name="q" value="{{ q }}" class="library-search"
            placeholder="銘柄・仮説・学びを検索…" autocomplete="off">
 
+    <label class="library-semantic-toggle">
+      <input type="checkbox" name="mode" value="semantic" {% if semantic %}checked{% endif %}>
+      意味で探す
+    </label>
+
     <div class="library-filters">
       <select name="action" aria-label="行動で絞り込む">
         <option value="">すべての行動</option>

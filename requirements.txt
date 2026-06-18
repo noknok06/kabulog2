@@ -3,6 +3,7 @@ psycopg[binary]==3.2.*
 django-allauth[socialaccount]==65.*   # extra pulls requests + PyJWT for OIDC
 django-htmx==1.23.*
 django-environ==0.12.*
-pgvector==0.4.*          # 列はMVPではコメントのまま・将来の意味検索用に席だけ確保
+pgvector==0.4.*          # 意味検索：Entry.embedding(VectorField) と距離クエリ
+sentence-transformers==3.*  # ローカル埋め込みバックエンド（multilingual-e5-base / torch をCPUで同梱）
 gunicorn==23.*           # 本番用。dev内ループでは未使用
 whitenoise==6.*          # 静的配信（本番/将来用）

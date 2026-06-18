@@ -15,6 +15,7 @@ Design soul:
 from django.db import models
 from django.urls import reverse
 from django.utils import timezone
+from pgvector.django import VectorField
 
 from common.models import OwnedModel
 
@@ -67,9 +68,8 @@ class Entry(OwnedModel):
 
     tags = models.ManyToManyField("ThemeTag", through="EntryTag", related_name="entries", blank=True)
 
-    # --- Deferred room for semantic search ---
-    # from pgvector.django import VectorField
-    # embedding = VectorField(dimensions=768, null=True, blank=True)
+    # --- Semantic search: embedding of the entry's prose (768 = multilingual-e5-base) ---
+    embedding = VectorField(dimensions=768, null=True, blank=True, editable=False)
 
     class Meta:
         ordering = ("-occurred_at", "-created_at")

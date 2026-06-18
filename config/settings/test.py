@@ -7,3 +7,7 @@ INSTALLED_APPS = [a for a in INSTALLED_APPS if a != "debug_toolbar"]
 MIDDLEWARE = [m for m in MIDDLEWARE if "debug_toolbar" not in m]
 
 PASSWORD_HASHERS = ["django.contrib.auth.hashers.MD5PasswordHasher"]
+
+# Deterministic, dependency-free embeddings: tests never download a model or hit
+# the network, and semantic results are stable.
+EMBEDDING_BACKEND = "fallback"

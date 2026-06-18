@@ -1,5 +1,5 @@
 {% load kabu_extras %}
-<p class="result-summary">{{ total }}件の記録</p>
+<p class="result-summary">{% if semantic %}意味の近い順 · {% endif %}{{ total }}件の記録</p>
 
 {% if page_obj.object_list %}
   <ul class="entry-list">

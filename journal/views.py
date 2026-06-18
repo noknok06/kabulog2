@@ -16,6 +16,7 @@ from common.context_processors import resolve_as_of
 
 from .forms import EntryForm, ScoreForm, TradeResultForm
 from .models import Entry, ThemeTag, TradeResult
+from .services.embeddings import embed_entry
 
 # Never a blank page — offer a question. Deterministic by day so it's stable.
 WRITING_PROMPTS = [
@@ -65,15 +66,7 @@ def library(request):
     qs = Entry.objects.for_owner(request.user).filter(status=Entry.Status.PUBLISHED)
 
     q = (request.GET.get("q") or "").strip()
-    if q:
-        qs = qs.filter(
-            Q(title__icontains=q)
-            | Q(body__icontains=q)
-            | Q(hypothesis__icontains=q)
-            | Q(learning__icontains=q)
-            | Q(ticker__icontains=q)
-            | Q(instrument_name__icontains=q)
-        )
+    semantic = request.GET.get("mode") == "semantic" and bool(q)
 
     action = request.GET.get("action") or ""
     if action in Entry.Action.values:
@@ -87,13 +80,29 @@ def library(request):
     if tag:
         qs = qs.filter(tags__slug=tag)
 
-    order = "occurred_at" if request.GET.get("sort") == "old" else "-occurred_at"
-    qs = (
-        qs.distinct()
-        .select_related("result")
-        .prefetch_related("tags")
-        .order_by(order, "-created_at")
-    )
+    qs = qs.distinct().select_related("result").prefetch_related("tags")
+
+    if semantic:
+        # Rank by meaning: cosine distance to the query embedding (nearest first).
+        from pgvector.django import CosineDistance
+
+        from common.embeddings import embed_query
+
+        qs = qs.exclude(embedding__isnull=True).annotate(
+            distance=CosineDistance("embedding", embed_query(q))
+        ).order_by("distance", "-created_at")
+    else:
+        if q:
+            qs = qs.filter(
+                Q(title__icontains=q)
+                | Q(body__icontains=q)
+                | Q(hypothesis__icontains=q)
+                | Q(learning__icontains=q)
+                | Q(ticker__icontains=q)
+                | Q(instrument_name__icontains=q)
+            )
+        order = "occurred_at" if request.GET.get("sort") == "old" else "-occurred_at"
+        qs = qs.order_by(order, "-created_at")
 
     paginator = Paginator(qs, 20)
     page = paginator.get_page(request.GET.get("page"))
@@ -104,6 +113,7 @@ def library(request):
         "page_obj": page,
         "total": paginator.count,
         "q": q,
+        "semantic": semantic,
         "action": action,
         "verdict": verdict,
         "tag": tag,
@@ -168,6 +178,7 @@ def publish(request):
             entry.status = Entry.Status.PUBLISHED
             entry.save()
             form.save_m2m()
+            embed_entry(entry)  # index for semantic search
             return redirect(entry.get_absolute_url())
     drafts = Entry.objects.for_owner(request.user).filter(status=Entry.Status.DRAFT).order_by("-updated_at")
     return render(
@@ -200,6 +211,7 @@ def score(request, pk):
             if scored.verdict != Entry.Verdict.UNVERIFIED and not scored.verified_at:
                 scored.verified_at = timezone.now()
             scored.save()
+            embed_entry(scored)  # learning changes the prose → re-index
             if request.htmx:
                 resp = render(request, "journal/partials/_score_done.html", {"entry": scored})
                 resp["HX-Trigger"] = "recallChanged"
