@@ -8,6 +8,7 @@ import json
 from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator
 from django.db.models import Q
+from django.http import Http404
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 from django.views.decorators.http import require_POST
@@ -17,6 +18,7 @@ from common.context_processors import resolve_as_of
 from .forms import EntryForm, ScoreForm, TradeResultForm
 from .models import Entry, ThemeTag, TradeResult
 from .services.embeddings import embed_entry
+from .services.karte import instrument_index, instrument_karte
 
 # Never a blank page — offer a question. Deterministic by day so it's stable.
 WRITING_PROMPTS = [
@@ -125,6 +127,25 @@ def library(request):
     }
     template = "journal/partials/_library_results.html" if request.htmx else "journal/library.html"
     return render(request, template, ctx)
+
+
+@login_required
+def karte_index(request):
+    """A directory of the instruments the user has written about (owner-scoped)."""
+    return render(request, "journal/karte_index.html", {"instruments": instrument_index(request.user)})
+
+
+@login_required
+def karte(request, ticker):
+    """One instrument's karte: the arc of decisions, quality signals and learnings.
+
+    ``instrument_karte`` returns ``None`` when the user has no entries for this
+    ticker, so another user's instrument is unreachable — a 404, never a leak.
+    """
+    data = instrument_karte(request.user, ticker)
+    if not data:
+        raise Http404("この銘柄の記録はありません。")
+    return render(request, "journal/karte.html", data)
 
 
 @login_required

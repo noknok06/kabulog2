@@ -93,7 +93,7 @@ Django 5.2 + DTL（Jinja不採用）+ HTMX/極小vanilla JS（SPA化しない）
 |---|---|
 | 意味検索（埋め込み） | pgvector image＋`VectorField`コメント＋想起の第5ソース枠 |
 | ライブラリ（検索/整理） | `Entry` の tags/verdict/status/index 済み、一覧は加算的 |
-| 詳細の作り込み・投資家カルテ | 既存フィールド上の読み取りサービスで新テーブル不要 |
+| 詳細の作り込み・投資家カルテ | 既存フィールド上の読み取りサービスで新テーブル不要（銘柄カルテ実装済み: `journal/services/karte.py`。意思決定の質と結果の乖離を中心に） |
 | 継続利用（月次/年次レビュー・Wrapped） | サーバーレンダリング＋必要ならChart.jsアイランド |
 | 関連グラフ | JSアイランド（d3/cytoscape）として独立 |
 | メディア（画像） | 認可付き配信ビュー＋`Attachment(OwnedModel)`。owner背骨が対応済み |

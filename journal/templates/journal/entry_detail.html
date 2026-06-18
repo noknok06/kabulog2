@@ -43,6 +43,7 @@
 
   <footer class="entry-foot">
     <a class="btn-link" href="{% url 'journal:edit' entry.pk %}">編集する</a>
+    {% if entry.ticker %}<a class="btn-link" href="{% url 'journal:karte' entry.ticker %}">この銘柄のカルテ →</a>{% endif %}
     <a class="btn-link" href="{% url 'home' %}">ホームへ</a>
   </footer>
 </article>

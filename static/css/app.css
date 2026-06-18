@@ -246,6 +246,43 @@ a:hover { text-decoration: underline; }
   .entry-row-meta { white-space: normal; }
 }
 
+/* --- 銘柄カルテ (per-instrument chart) --- */
+.karte { max-width: 40rem; margin: 0 auto; }
+.karte-head { margin-bottom: 1.5rem; }
+.karte-summary {
+  background: var(--surface-2); border-radius: var(--radius);
+  padding: 1.25rem 1.4rem; margin-bottom: 2rem;
+}
+.karte-stat { margin-bottom: 1.1rem; }
+.karte-stat:last-child { margin-bottom: 0; }
+.karte-stat h2 {
+  font-size: .85rem; color: var(--ink-faint); font-weight: 600;
+  letter-spacing: .04em; margin: 0 0 .35rem;
+}
+.karte-stat p { margin: 0; color: var(--ink-soft); }
+.karte-divergence-list { list-style: none; padding: 0; margin: .6rem 0 0; }
+.karte-divergence-list li {
+  display: flex; align-items: baseline; gap: .6rem; padding: .25rem 0;
+}
+.karte-divergence-label {
+  flex-shrink: 0; padding: .15rem .6rem; border-radius: 999px;
+  background: var(--surface); border: 1px solid var(--line);
+  color: var(--ink-soft); font-size: .8rem;
+}
+.karte-pnl .pnl-gain { color: var(--gain); }
+.karte-pnl .pnl-loss { color: var(--loss); }
+
+.karte-learnings, .karte-timeline { margin-top: 2rem; }
+.karte-learnings h2, .karte-timeline h2 {
+  font-size: 1rem; color: var(--ink-faint); font-weight: 600;
+  letter-spacing: .04em; margin: 0 0 .75rem;
+}
+.karte-learning-list { list-style: none; padding: 0; margin: 0; }
+.karte-learning-list li {
+  padding: .55rem 0; border-top: 1px solid var(--line); color: var(--ink-soft);
+}
+.karte-learning-list li:last-child { border-bottom: 1px solid var(--line); }
+
 /* --- Motion: respect reduced-motion --- */
 @media (prefers-reduced-motion: reduce) {
   * { animation: none !important; transition: none !important; }

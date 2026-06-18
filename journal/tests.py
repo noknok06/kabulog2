@@ -200,6 +200,67 @@ def test_library_semantic_is_owner_scoped(client, alice, bob):
     assert "bob_semantic_marker" not in body
 
 
+# --- 銘柄カルテ (per-instrument aggregation) -------------------------------
+def test_karte_aggregates_owner_instrument(alice):
+    """One instrument's published entries fold into counts and a hit rate."""
+    from journal.services.karte import instrument_karte
+
+    for v in (Entry.Verdict.HIT, Entry.Verdict.HIT, Entry.Verdict.MISS):
+        Entry.objects.create(
+            owner=alice, body="b", status=Entry.Status.PUBLISHED,
+            ticker="5803", instrument_name="フジクラ", verdict=v,
+        )
+    data = instrument_karte(alice, "5803")
+    assert data["count"] == 3
+    assert data["hit_count"] == 2 and data["miss_count"] == 1
+    assert data["verified_count"] == 3
+    assert data["hit_rate_pct"] == 67  # round(2/3 * 100)
+    assert data["name"] == "フジクラ"
+
+
+def test_karte_view_is_owner_scoped(client, alice, bob):
+    """Another user's ticker is unreachable — 404, never a leak."""
+    Entry.objects.create(owner=bob, body="b", status=Entry.Status.PUBLISHED, ticker="9999")
+    client.force_login(alice)
+    assert client.get(reverse("journal:karte", args=["9999"])).status_code == 404
+
+
+def test_karte_index_lists_only_owner_instruments(client, alice, bob):
+    Entry.objects.create(owner=alice, body="a", status=Entry.Status.PUBLISHED,
+                         ticker="5803", instrument_name="フジクラ")
+    Entry.objects.create(owner=bob, body="b", status=Entry.Status.PUBLISHED,
+                         ticker="9999", instrument_name="ボブ銘柄")
+    client.force_login(alice)
+    body = client.get(reverse("journal:karte_index")).content.decode()
+    assert "フジクラ" in body
+    assert "ボブ銘柄" not in body
+
+
+def test_karte_divergence_detects_right_call_wrong_pnl(alice):
+    """The soul: a right call (HIT) whose price fell shows up as divergence."""
+    from journal.models import TradeResult
+    from journal.services.karte import instrument_karte
+
+    e = Entry.objects.create(owner=alice, body="b", status=Entry.Status.PUBLISHED,
+                             ticker="2802", verdict=Entry.Verdict.HIT)
+    TradeResult.objects.create(owner=alice, entry=e, realized=True, pnl_amount=-1000)
+    data = instrument_karte(alice, "2802")
+    assert data["divergence_count"] == 1
+    assert data["divergence"][0]["kind"] == "right_call_wrong_result"
+
+
+def test_karte_calibration_flags_overconfidence(alice):
+    """More confident on the MISS than the HIT → a gentle overconfidence note."""
+    from journal.services.karte import instrument_karte
+
+    Entry.objects.create(owner=alice, body="b", status=Entry.Status.PUBLISHED,
+                         ticker="7203", verdict=Entry.Verdict.HIT, confidence=40)
+    Entry.objects.create(owner=alice, body="b", status=Entry.Status.PUBLISHED,
+                         ticker="7203", verdict=Entry.Verdict.MISS, confidence=80)
+    data = instrument_karte(alice, "7203")
+    assert data["calibration_note"] == "自信過剰の傾向"
+
+
 def test_scoring_writes_quality_not_result(client, alice, alice_entry):
     """Scoring sets verdict/learning and verified_at — it never touches P&L."""
     client.force_login(alice)

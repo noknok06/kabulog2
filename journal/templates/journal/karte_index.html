@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block title %}銘柄カルテ · kabu-log{% endblock %}
+
+{% block content %}
+<section class="library">
+  <h1 class="library-title">銘柄カルテ</h1>
+  <p class="muted">銘柄ごとに、これまでの判断と学びを振り返る。</p>
+
+  {% if instruments %}
+    <ul class="entry-list">
+      {% for inst in instruments %}
+        <li class="entry-row">
+          <a class="entry-row-main" href="{% url 'journal:karte' inst.ticker %}">
+            <span class="entry-row-title">{{ inst.name|default:inst.ticker }}{% if inst.name %}（{{ inst.ticker }}）{% endif %}</span>
+            <span class="entry-row-excerpt">{{ inst.count }}件の判断{% if inst.awaiting %} · 検証待ち {{ inst.awaiting }}件{% endif %}</span>
+          </a>
+          <div class="entry-row-meta">
+            <time datetime="{{ inst.last|date:'Y-m-d' }}">{{ inst.last|date:"Y/n/j" }}</time>
+          </div>
+        </li>
+      {% endfor %}
+    </ul>
+  {% else %}
+    <div class="library-empty">
+      <p>まだ銘柄の記録がありません。</p>
+      <a class="btn-primary" href="{% url 'journal:compose' %}">最初の記録を書く</a>
+    </div>
+  {% endif %}
+</section>
+{% endblock %}

@@ -1,0 +1,105 @@
+{% extends "base.html" %}
+{% load kabu_extras %}
+{% block title %}{{ name|default:ticker }} · カルテ · kabu-log{% endblock %}
+
+{% block content %}
+<section class="karte">
+  <header class="karte-head">
+    <p class="entry-meta">
+      {{ first_date|date:"Y年n月" }}〜{{ last_date|date:"Y年n月" }} · {{ count }}件の判断
+    </p>
+    <h1 class="entry-title">{{ name|default:ticker }}{% if name %}（{{ ticker }}）{% endif %}</h1>
+  </header>
+
+  {# Quiet diagnostic panel — decision quality, never a P&L scoreboard. #}
+  <section class="karte-summary">
+    <div class="karte-stat">
+      <h2>判定の内訳</h2>
+      <p>
+        当たった {{ hit_count }} · 外れた {{ miss_count }} · 部分的 {{ partial_count }} · 未検証 {{ unverified_count }}
+        {% if hit_rate_pct is not None %}<span class="muted">（検証 {{ verified_count }} 件中 的中 {{ hit_rate_pct }}%）</span>{% endif %}
+      </p>
+    </div>
+
+    {% if calibration_note %}
+      <div class="karte-stat">
+        <h2>確信度の較正</h2>
+        <p>{{ calibration_note }}
+          <span class="muted">（当てた判断の平均確信度 {{ avg_confidence_hit|floatformat:0 }}% ／ 外した判断 {{ avg_confidence_miss|floatformat:0 }}%）</span>
+        </p>
+      </div>
+    {% endif %}
+
+    {% if divergence %}
+      <div class="karte-stat karte-divergence">
+        <h2>意思決定の質と結果の乖離</h2>
+        <p class="muted">仮説の当否と損益がずれた判断。ここに学びが宿る。</p>
+        <ul class="karte-divergence-list">
+          {% for d in divergence %}
+            <li>
+              <span class="karte-divergence-label">{{ d.label }}</span>
+              <a href="{{ d.entry.get_absolute_url }}">{{ d.entry.title|default:d.entry.occurred_at|date:"Y/n/j" }}</a>
+            </li>
+          {% endfor %}
+        </ul>
+      </div>
+    {% endif %}
+
+    {% if awaiting %}
+      <p class="muted">検証待ちの仮説が {{ awaiting }} 件あります。</p>
+    {% endif %}
+    {% if realized_pnl is not None %}
+      <p class="muted karte-pnl">実現損益（参考）：<span class="{% if realized_pnl >= 0 %}pnl-gain{% else %}pnl-loss{% endif %}">{{ realized_pnl }}</span></p>
+    {% endif %}
+  </section>
+
+  {# Accumulated learnings about this instrument. #}
+  {% if learnings %}
+    <section class="karte-learnings">
+      <h2>この銘柄での学び</h2>
+      <ul class="karte-learning-list">
+        {% for e in learnings %}
+          <li>
+            <a href="{{ e.get_absolute_url }}">{{ e.learning|truncatechars:90 }}</a>
+            <span class="muted">（{{ e.occurred_at|date:"Y/n/j" }}）</span>
+          </li>
+        {% endfor %}
+      </ul>
+    </section>
+  {% endif %}
+
+  {# The arc over time. #}
+  <section class="karte-timeline">
+    <h2>時系列</h2>
+    <ul class="entry-list">
+      {% for e in entries %}
+        <li class="entry-row verdict-{{ e.verdict }}">
+          <a class="entry-row-main" href="{{ e.get_absolute_url }}">
+            <span class="entry-row-title">{{ e.title|default:e.body|truncatechars:40|default:"無題の記録" }}</span>
+            {% if e.hypothesis %}
+              <span class="entry-row-excerpt">「{{ e.hypothesis|truncatechars:72 }}」{% if e.confidence is not None %} · 確信度 {{ e.confidence }}%{% endif %}</span>
+            {% elif e.learning %}
+              <span class="entry-row-excerpt">学び：{{ e.learning|truncatechars:80 }}</span>
+            {% endif %}
+          </a>
+          <div class="entry-row-meta">
+            <time datetime="{{ e.occurred_at|date:'Y-m-d' }}">{{ e.occurred_at|date:"Y/n/j" }}</time>
+            <span class="entry-row-action">{{ e.get_action_display }}</span>
+            {% if e.verdict != 'unverified' %}
+              <span class="verdict-badge">{{ e.get_verdict_display }}</span>
+            {% endif %}
+            {% if e.result and e.result.pnl_amount is not None %}
+              <span class="entry-row-pnl {% if e.result.pnl_amount >= 0 %}pnl-gain{% else %}pnl-loss{% endif %}">{{ e.result.pnl_amount }}</span>
+            {% endif %}
+          </div>
+        </li>
+      {% endfor %}
+    </ul>
+  </section>
+
+  <footer class="entry-foot">
+    <a class="btn-link" href="{% url 'journal:karte_index' %}">← カルテ一覧</a>
+    <a class="btn-link" href="{% url 'home' %}">ホームへ</a>
+  </footer>
+</section>
+{% endblock %}
