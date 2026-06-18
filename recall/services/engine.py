@@ -6,19 +6,19 @@ The recall engine — the heart of the core loop.
 It has no side effects — the view records the show afterwards. No async.
 
 Candidate sources and intent:
-- anniversary     "◯年前の今日"      — the strongest emotional hook (meeting your past self)
-- unverified      "検証待ちの仮説"     — closes the pre-register → verify → learn loop
-- recent_learning "最近の学び"         — reinforce a lesson just recorded
-- freshness       "ふと思い出す"       — gently resurface an old, untouched note
-
-Semantic similarity (embeddings) is a future 5th source: add a candidate
-function + a weight, no redesign.
+- anniversary     "◯年前の今日"            — the strongest emotional hook (meeting your past self)
+- unverified      "検証待ちの仮説"           — closes the pre-register → verify → learn loop
+- semantic        "以前も似たことを考えていた"  — past thinking closest in meaning to your latest entry
+- recent_learning "最近の学び"              — reinforce a lesson just recorded
+- freshness       "ふと思い出す"            — gently resurface an old, untouched note
 """
 from __future__ import annotations
 
 import random
 from dataclasses import dataclass
 from datetime import timedelta
+
+from pgvector.django import CosineDistance
 
 from journal.models import Entry
 
@@ -27,6 +27,7 @@ from recall.models import RecallShownLog
 WEIGHTS = {
     "anniversary": 100,
     "unverified": 70,
+    "semantic": 50,
     "recent_learning": 40,
     "freshness": 20,
 }
@@ -34,6 +35,8 @@ REPEAT_WINDOW_DAYS = 14    # rotation window: a card shown on a prior day rests 
 UNVERIFIED_HORIZON_DAYS = 30   # only nudge hypotheses old enough to have an answer
 FRESHNESS_MIN_AGE_DAYS = 90
 FRESHNESS_SAMPLE = 5
+SEMANTIC_MIN_AGE_DAYS = 30  # only resurface entries old enough to feel like "past thinking"
+SEMANTIC_SAMPLE = 3         # top-K nearest past entries to the latest one
 
 
 @dataclass
@@ -74,6 +77,29 @@ def _candidates(user, as_of) -> list[RecallCard]:
         picked = rng.sample(fresh_pool, min(FRESHNESS_SAMPLE, len(fresh_pool)))
         for e in qs.filter(pk__in=picked):
             out.append(RecallCard(e, "freshness", WEIGHTS["freshness"], "ふと思い出す"))
+
+    # 5) semantic: older entries closest in meaning to the latest one. Deterministic
+    #    (no randomness): a fixed anchor + cosine distance over stored embeddings.
+    anchor = (
+        qs.exclude(embedding__isnull=True)
+        .filter(occurred_at__lte=as_of)
+        .order_by("-occurred_at", "-created_at", "-pk")
+        .first()
+    )
+    if anchor is not None:
+        similar = (
+            qs.exclude(pk=anchor.pk)
+            .exclude(embedding__isnull=True)
+            .filter(occurred_at__lte=as_of - timedelta(days=SEMANTIC_MIN_AGE_DAYS))
+            .annotate(distance=CosineDistance("embedding", anchor.embedding))
+            .order_by("distance", "-occurred_at", "-pk")[:SEMANTIC_SAMPLE]
+        )
+        for e in similar:
+            similarity = max(0.0, 1.0 - float(e.distance))
+            out.append(RecallCard(
+                e, "semantic", WEIGHTS["semantic"] + similarity * 10,
+                "以前も似たことを考えていた",
+            ))
     return out
 
 

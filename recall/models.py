@@ -17,7 +17,7 @@ class RecallShownLog(OwnedModel):
         ACTED = "acted", "対応済"
 
     entry = models.ForeignKey("journal.Entry", on_delete=models.CASCADE, related_name="recall_shows")
-    source = models.CharField(max_length=24)  # anniversary|unverified|recent_learning|freshness
+    source = models.CharField(max_length=24)  # anniversary|unverified|semantic|recent_learning|freshness
     shown_on = models.DateField(db_index=True)
     action = models.CharField(max_length=10, choices=Action.choices, default=Action.SHOWN)
 

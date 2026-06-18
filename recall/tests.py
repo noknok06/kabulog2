@@ -8,6 +8,7 @@ import pytest
 from django.contrib.auth import get_user_model
 
 from journal.models import Entry
+from journal.services.embeddings import embed_entry
 from recall.models import RecallShownLog
 from recall.services.engine import get_recall_cards, record_shown
 
@@ -77,6 +78,55 @@ def test_candidate_pool_is_owner_scoped(user, db):
     other = User.objects.create_user(email="other@example.com", password="pw")
     _pub(other, body="not yours", occurred_at=AS_OF.replace(year=2025), hypothesis="secret")
     assert get_recall_cards(user, AS_OF) == []
+
+
+# --- Semantic source (runs on the deterministic fallback embedder) ----------
+def test_semantic_surfaces_similar_past_thinking(user):
+    """The most recent entry anchors a search for older, similar past thinking."""
+    anchor = _pub(user, body="円安が続くと考え、輸出関連株に強気。トヨタを買う。", occurred_at=AS_OF)
+    similar = _pub(user, body="円安が続くと考え、輸出関連株に注目。トヨタに強気。",
+                   occurred_at=AS_OF - timedelta(days=60))
+    unrelated = _pub(user, body="半導体の設備投資サイクルのメモ。配当利回りの罠。",
+                     occurred_at=AS_OF - timedelta(days=70))
+    for e in (anchor, similar, unrelated):
+        embed_entry(e)
+
+    cards = {c.entry.pk: c for c in get_recall_cards(user, AS_OF)}
+    assert cards[similar.pk].source == "semantic"
+    assert cards[similar.pk].reason == "以前も似たことを考えていた"
+    # The nearer entry outranks the unrelated one within the semantic source.
+    assert cards[unrelated.pk].source == "semantic"
+    assert cards[similar.pk].score > cards[unrelated.pk].score
+    # The anchor itself is not resurfaced.
+    assert anchor.pk not in cards
+
+
+def test_semantic_skips_too_recent_and_unembedded(user):
+    anchor = _pub(user, body="円安と輸出株に強気", occurred_at=AS_OF)
+    valid_old = _pub(user, body="円安と輸出株に強気のメモ", occurred_at=AS_OF - timedelta(days=60))
+    too_recent = _pub(user, body="円安と輸出株に強気の続き", occurred_at=AS_OF - timedelta(days=5))
+    no_embedding = _pub(user, body="円安と輸出株だが未埋め込み", occurred_at=AS_OF - timedelta(days=60))
+    for e in (anchor, valid_old, too_recent):
+        embed_entry(e)  # no_embedding intentionally left without a vector
+
+    cards = {c.entry.pk: c for c in get_recall_cards(user, AS_OF)}
+    assert cards[valid_old.pk].source == "semantic"
+    assert too_recent.pk not in cards     # within SEMANTIC_MIN_AGE_DAYS
+    assert no_embedding.pk not in cards    # has no embedding
+
+
+def test_semantic_source_is_owner_scoped(user, db):
+    other = User.objects.create_user(email="other2@example.com", password="pw")
+    o_anchor = _pub(other, body="円安と輸出株", occurred_at=AS_OF)
+    o_old = _pub(other, body="円安と輸出株のメモ", occurred_at=AS_OF - timedelta(days=60))
+    a = _pub(user, body="円安と輸出株", occurred_at=AS_OF)
+    old = _pub(user, body="円安と輸出株のメモ", occurred_at=AS_OF - timedelta(days=60))
+    for e in (o_anchor, o_old, a, old):
+        embed_entry(e)
+
+    pks = {c.entry.pk for c in get_recall_cards(user, AS_OF)}
+    assert old.pk in pks
+    assert o_old.pk not in pks and o_anchor.pk not in pks
 
 
 def test_record_shown_is_idempotent_per_day(user):
